@@ -37,7 +37,6 @@ import edu.wpi.first.wpilibj.Solenoid;
  * necessary to operate a robot with tank drive.
  */
 public class Robot extends TimedRobot {
-  
   private XboxController stick_0 = new XboxController(0);
   private XboxController stick_1 = new XboxController(1);
   private TalonFX chassis_motor_0 = new TalonFX(20);
@@ -61,22 +60,48 @@ public class Robot extends TimedRobot {
   private NetworkTable table;
   private Timer timer = new Timer();
 
+  private boolean has_five_balls = false;
+
   private DigitalInput climb_sw_top = new DigitalInput(1);
   private DigitalInput climb_sw_bottom = new DigitalInput(0);
   private Boolean ShootingAutomation = false;
   //private PIDController DrivePID = new PIDController(0.05, 0, 0);
   //private PIDController ShooterPID = new PIDController(kp, ki, kd);
 
+
+  public void Shooter_aimByLimeLight() {
+    double tx0 = table.getEntry("tx").getDouble(0);
+    double Deg = convertToDeg(shooter_motor_rotate_encoder.getSelectedSensorPosition(0));
+    SmartDashboard.putNumber("Degree of the shooter_motor_rotate",Deg);
+    SmartDashboard.putNumber("tx",tx0);
+    double Turn = shooter_motor_rotatePID.calculate(tx0,0)/1.5;
+    shooter_motor_rotate.set(ControlMode.PercentOutput, -Turn);
+  }
+  
+  public double convertToDeg(double units) {
+    return (units * (360.0/4096.0)*(18.0/120.0)) - k_shooter_zero;
+  }
+  
   @Override
   public void robotInit() {
     timer.reset();
     table = NetworkTableInstance.getDefault().getTable("limelight");
+    
+    chassis_motor_0.setInverted(false);
+    chassis_motor_1.setInverted(false);
+    chassis_motor_2.setInverted(true);
+    chassis_motor_3.setInverted(true);
+    
+    shooter_motor_left.setInverted(true);
+    shooter_motor_right.setInverted(false);
   }
 
   @Override
   public void robotPeriodic() {
     SmartDashboard.putBoolean("SW Bottom", climb_sw_bottom.get());
     SmartDashboard.putBoolean("SW Top", climb_sw_top.get());
+
+    SmartDashboard.putBoolean("Full", has_five_balls);
     
   }
   @Override
@@ -105,8 +130,8 @@ public class Robot extends TimedRobot {
 
     chassis_motor_0.set(ControlMode.PercentOutput, y + z);
     chassis_motor_1.set(ControlMode.PercentOutput, y + z);
-    chassis_motor_3.set(ControlMode.PercentOutput, -y + z);
-    chassis_motor_2.set(ControlMode.PercentOutput, -y + z);
+    chassis_motor_2.set(ControlMode.PercentOutput, y - z);
+    chassis_motor_3.set(ControlMode.PercentOutput, y - z);
 
     // stick_0.setRumble(RumbleType.kLeftRumble, Drive);
     // stick_0.setRumble(RumbleType.kRightRumble, Turn);、
@@ -119,12 +144,14 @@ public class Robot extends TimedRobot {
         transmission_motor_belt.set(ControlMode.PercentOutput, 0.9);
         transmission_motor_wheel.set(ControlMode.PercentOutput, 0.9);
         shooter_motor_left.set(ControlMode.PercentOutput, 1);
+        shooter_motor_right.set(ControlMode.PercentOutput, 1);
       }
       else {
         intake_motor.set(ControlMode.PercentOutput, 0.6);
         transmission_motor_belt.set(ControlMode.PercentOutput, 0.9);
         transmission_motor_wheel.set(ControlMode.PercentOutput, 0.9);
         shooter_motor_left.set(ControlMode.PercentOutput, 0);
+        shooter_motor_right.set(ControlMode.PercentOutput, 0);
       }
     }
     else if (stick_1.getBButton()) {
@@ -132,12 +159,14 @@ public class Robot extends TimedRobot {
       transmission_motor_belt.set(ControlMode.PercentOutput, -0.3);
       transmission_motor_wheel.set(ControlMode.PercentOutput, -0.3);
       shooter_motor_left.set(ControlMode.PercentOutput, -0.3);
+      shooter_motor_right.set(ControlMode.PercentOutput, -0.3);
     }
     else {
       intake_motor.set(ControlMode.PercentOutput, 0);
       transmission_motor_belt.set(ControlMode.PercentOutput, 0);
       transmission_motor_wheel.set(ControlMode.PercentOutput, 0);
       shooter_motor_left.set(ControlMode.PercentOutput, 0);
+      shooter_motor_right.set(ControlMode.PercentOutput, 0);
     }
 
     if (stick_1.getBumper(Hand.kLeft)) {
@@ -155,9 +184,7 @@ public class Robot extends TimedRobot {
       climb_motor_shaft.set(ControlMode.PercentOutput, 0);
     }
 
-
     motor_color_spinner.set(ControlMode.PercentOutput, stick_0.getX(Hand.kRight));
-
 
 
     if (stick_0.getPOV() == 0 || stick_0.getPOV() == 45 || stick_0.getPOV() == 315) {
@@ -176,23 +203,8 @@ public class Robot extends TimedRobot {
     else if (stick_0.getBButton()) {
       intake_solenoid.set(false);
     }
-
-  }
-
-  public void Shooter_aimByLimeLight() {
-    double tx0 = table.getEntry("tx").getDouble(0);
-    double Deg = convertToDeg(shooter_motor_rotate_encoder.getSelectedSensorPosition(0));
-    SmartDashboard.putNumber("Degree of the shooter_motor_rotate",Deg);
-    SmartDashboard.putNumber("tx",tx0);
-    double Turn = shooter_motor_rotatePID.calculate(tx0,0)/1.5;
-    shooter_motor_rotate.set(ControlMode.PercentOutput, -Turn);
   }
   
-  public double convertToDeg(double units) {
-    return (units * (360.0/4096.0)*(18.0/120.0)) - k_shooter_zero;
-  }
-  
-
   @Override
   public void testPeriodic() {
     if (stick_1.getStartButton()) {
